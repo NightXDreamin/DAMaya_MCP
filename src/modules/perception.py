@@ -62,3 +62,41 @@ def register_perception_tools(mcp, conn):
         允许 AI 编写复杂的检测逻辑并直接运行。
         """
         return conn.execute(python_code)
+    @mcp.tool()
+    def capture_viewport(output_name: str = "ai_capture.jpg"):
+        """
+        截取 Maya 当前活动视口的截图，并尝试将其路径返回。
+        """
+        code = f"""
+        import maya.cmds as cmds
+        import os
+        # 获取临时目录
+        tmp_dir = cmds.internalVar(userTmpDir=True)
+        full_path = os.path.join(tmp_dir, '{output_name}')
+        
+        # 视口截图逻辑
+        cmds.viewFit(all=True) # 自动对焦物体
+        cmds.playblast(frame=cmds.currentTime(q=True), format='image', 
+                       viewer=False, compression='jpg', completeFilename=full_path)
+        
+        _mcp_results = {{"message": "Screenshot saved", "path": full_path}}
+        """
+        return conn.execute(code)
+
+    @mcp.tool()
+    def get_node_attributes(node_name: str):
+        """
+        精准获取某个节点的所有可 Key 属性和 Message 连接，弥补通用查询的不足。
+        """
+        code = f"""
+        import maya.cmds as cmds
+        if not cmds.objExists('{node_name}'):
+            _mcp_results = {{"error": "Node not found"}}
+        else:
+            _mcp_results = {{
+                "keyable": cmds.listAttr('{node_name}', k=True) or [],
+                "user_defined": cmds.listAttr('{node_name}', ud=True) or [],
+                "type": cmds.objectType('{node_name}')
+            }}
+        """
+    
