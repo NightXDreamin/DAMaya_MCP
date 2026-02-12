@@ -6,11 +6,28 @@ def register_perception_tools(mcp, conn):
         """
         深度查询场景拓扑。解决 Opus 无法看到层级和连接的问题。
         返回：节点名称、类型、父级、子级、以及输入/输出连接。
+        node_type 支持逗号分隔多类型，如 "transform,joint,constraint"。
         """
         code = f"""
-        nodes = cmds.ls('{pattern}', type='{node_type}', long=True) or []
+        import maya.cmds as cmds
+        type_str = '{node_type}'
+        types = [t.strip() for t in type_str.split(',')]
+        
+        all_nodes = []
+        for t in types:
+            found = cmds.ls('{pattern}', type=t, long=True) or []
+            all_nodes.extend(found)
+        
+        # 去重并保持顺序
+        seen = set()
+        unique_nodes = []
+        for n in all_nodes:
+            if n not in seen:
+                seen.add(n)
+                unique_nodes.append(n)
+        
         _mcp_results = []
-        for n in nodes[:30]: # 限制数量防止 Token 溢出
+        for n in unique_nodes[:30]:
             _mcp_results.append({{
                 "name": n.split('|')[-1],
                 "type": cmds.objectType(n),

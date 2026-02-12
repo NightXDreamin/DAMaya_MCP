@@ -4,24 +4,53 @@ def register_ue_tools(mcp, conn):
         """
         UE 资产导出前检查：
         1. 检查是否有冻结变换（Freeze Transformations）
-        2. 检查是否有重叠 UV（Overlapping UVs）
-        3. 检查轴心点（Pivot）是否在原点
+        2. 检查轴心点（Pivot）是否在原点
+        3. 检查是否有未烘焙的历史记录
+        返回每个节点、每项检查的 pass/fail 结构化结果。
         """
         code = f"""
-        report = []
+        import maya.cmds as cmds
         nodes = {node_list}
+        report = []
         for n in nodes:
-            # 检查位移是否归零
-            pos = cmds.xform(n, q=True, ws=True, rp=True)
-            if any(abs(v) > 0.001 for v in pos):
-                report.append(f"{{n}}: Pivot is not at origin")
+            checks = {{}}
             
-            # 检查历史记录
-            history = cmds.listHistory(n, pruneDagObjects=True)
-            if len(history) > 1:
-                report.append(f"{{n}}: Has unbaked history")
+            # 1. Freeze Transforms: translate/rotate 应为 0, scale 应为 1
+            t = cmds.getAttr(n + '.translate')[0]
+            r = cmds.getAttr(n + '.rotate')[0]
+            s = cmds.getAttr(n + '.scale')[0]
+            has_non_frozen_t = any(abs(v) > 0.001 for v in t)
+            has_non_frozen_r = any(abs(v) > 0.001 for v in r)
+            has_non_frozen_s = any(abs(v - 1.0) > 0.001 for v in s)
+            checks['freeze_transforms'] = {{
+                'passed': not (has_non_frozen_t or has_non_frozen_r or has_non_frozen_s),
+                'translate': [round(v, 4) for v in t],
+                'rotate': [round(v, 4) for v in r],
+                'scale': [round(v, 4) for v in s]
+            }}
+            
+            # 2. Pivot at origin
+            pivot = cmds.xform(n, q=True, ws=True, rp=True)
+            checks['pivot_at_origin'] = {{
+                'passed': all(abs(v) < 0.001 for v in pivot),
+                'pivot': [round(v, 4) for v in pivot]
+            }}
+            
+            # 3. History check
+            history = cmds.listHistory(n, pruneDagObjects=True) or []
+            checks['clean_history'] = {{
+                'passed': len(history) <= 1,
+                'history_count': len(history)
+            }}
+            
+            all_passed = all(c['passed'] for c in checks.values())
+            report.append({{
+                'node': n,
+                'all_passed': all_passed,
+                'checks': checks
+            }})
         
-        _mcp_results = report if report else "All checks passed for UE."
+        _mcp_results = report
         """
         return conn.execute(code)
 
