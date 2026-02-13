@@ -2,11 +2,14 @@ def register_ue_tools(mcp, conn):
     @mcp.tool()
     def validate_for_ue(node_list: list):
         """
-        UE 资产导出前检查：
-        1. 检查是否有冻结变换（Freeze Transformations）
-        2. 检查轴心点（Pivot）是否在原点
-        3. 检查是否有未烘焙的历史记录
-        返回每个节点、每项检查的 pass/fail 结构化结果。
+        在导出至 Unreal Engine 之前执行一系列自动化检查。
+
+        包含检查项：
+        1. Freeze Transforms（平移/旋转/缩放是否在期望值）
+        2. Pivot 是否位于原点
+        3. 是否存在未烘焙的历史记录
+
+        返回针对每个节点的结构化报告（每项检查的通过状态与相关数据），便于流水线自动化或人工复核。
         """
         code = f"""
         import maya.cmds as cmds
@@ -57,7 +60,10 @@ def register_ue_tools(mcp, conn):
     @mcp.tool()
     def quick_export_fbx(export_path: str, selection_only: bool = True):
         """
-        调用 FBX 插件导出资产。
+        使用 Maya 的 FBX 导出流程将场景或选定对象导出为 FBX 文件。
+
+        实现细节：在需要时自动加载 `fbxmaya` 插件，并使用 `cmds.file(..., es=...)` 执行导出。
+        返回导出路径字符串以便后续上传或归档。
         """
         code = f"""
         import maya.mel as mel

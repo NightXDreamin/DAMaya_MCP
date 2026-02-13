@@ -2,9 +2,10 @@ def register_rigging_tools(mcp, conn):
     @mcp.tool()
     def trace_rig_logic(node_name: str):
         """
-        专门用于 Rigging 调试。
-        查询一个节点的所有约束关系（Constraints）和 Message 属性连接。
-        返回去重后的约束列表、message 连接和 driven key 信息。
+        针对骨骼绑定与约束问题的诊断工具。
+
+        返回结构化信息包括：去重后的约束列表、每个约束的类型与目标、相关的 message 连接，以及驱动关键帧信息。
+        该工具用于生产级排查 Rig 逻辑错误并生成可序列化的诊断结果。
         """
         code = f"""
         import maya.cmds as cmds
@@ -32,7 +33,9 @@ def register_rigging_tools(mcp, conn):
     @mcp.tool()
     def get_influence_joints(mesh_name: str):
         """
-        获取 Mesh 的影响骨骼列表及其权重范围（min/max）。
+        收集指定 Mesh 的绑定影响信息（skinCluster 的影响关节及其权重统计）。
+
+        返回每个关节的最小/最大权重、受影响顶点数量以及使用的 skinCluster。适合用于导出前的质量分析与自动化校验。
         """
         code = f"""
         import maya.cmds as cmds

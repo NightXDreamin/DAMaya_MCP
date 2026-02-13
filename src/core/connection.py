@@ -9,13 +9,19 @@ class MayaConnection:
 
     def execute(self, py_code: str):
         """
-        通过 Maya commandPort (sourceType='python') 执行 Python 代码。
-        Maya 端需要这样开启：
+        在远程 Maya 会话中通过 commandPort 执行 Python 代码并返回结构化输出。
+
+        功能说明：
+        - 使用 textwrap.dedent 清理传入代码；在 Maya 端以受控上下文执行。
+        - 在执行期间使用 undo chunk 包裹以保证操作可回退。
+        - 捕获 stdout 与 _mcp_results 并通过固定的 JSON 边界文本返回。
+
+        前置条件：Maya 端需要开启 Python 类型的 commandPort，例如：
             cmds.commandPort(n=':7022', sourceType='python', echoOutput=True)
         """
         clean_user_code = textwrap.dedent(py_code).strip()
         
-        # 构造完整的 Python 代码，直接发送（不需要 MEL 包裹）
+        # 构造待发送的 Python 执行体（无需 MEL 包裹）
         python_lines = [
             "import maya.cmds as cmds",
             "import json, io, contextlib, traceback",
@@ -50,6 +56,7 @@ class MayaConnection:
                 
                 full_res = full_res.strip('\x00').strip()
                 
+                # 如果返回中包含 MCP 标记则解析 JSON 负载
                 if "MCP_JSON_START:" in full_res:
                     try:
                         content = full_res.split("MCP_JSON_START:")[1].split(":MCP_JSON_END")[0].strip()

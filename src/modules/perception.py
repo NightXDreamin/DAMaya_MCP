@@ -4,9 +4,14 @@ def register_perception_tools(mcp, conn):
     @mcp.tool()
     def query_scene_topology(pattern: str = "*", node_type: str = "transform"):
         """
-        深度查询场景拓扑。解决 Opus 无法看到层级和连接的问题。
-        返回：节点名称、类型、父级、子级、以及输入/输出连接。
-        node_type 支持逗号分隔多类型，如 "transform,joint,constraint"。
+        查询场景拓扑并返回结构化节点信息。
+
+        返回结构包括：节点名称、类型、完整路径、父节点、子节点，以及输入/输出连接。
+        该工具用于在自动化与生产流水线中获取明确的层级与连接关系，以支持后续分析、同步或诊断。
+
+        参数说明：
+        - `pattern`: Maya 节点匹配模式（默认为全部 `*`）。
+        - `node_type`: 支持以逗号分隔的节点类型列表，例如 "transform,joint,constraint"。
         """
         code = f"""
         import maya.cmds as cmds
@@ -18,7 +23,7 @@ def register_perception_tools(mcp, conn):
             found = cmds.ls('{pattern}', type=t, long=True) or []
             all_nodes.extend(found)
         
-        # 去重并保持顺序
+        # 对搜索结果去重以保证顺序一致性
         seen = set()
         unique_nodes = []
         for n in all_nodes:
@@ -43,7 +48,10 @@ def register_perception_tools(mcp, conn):
     @mcp.tool()
     def get_selection_context():
         """
-        感知用户当前在 Maya 中选了什么。让 AI 瞬间获得上下文。
+        获取当前 Maya 选择集合的上下文信息。
+
+        返回包含选择数量、对象清单以及首个对象的类型（如存在）。
+        该工具仅做只读查询，适用于向 AI 或上游服务提供确定性输入。
         """
         code = """
         sel = cmds.ls(sl=True, long=True)
@@ -58,24 +66,27 @@ def register_perception_tools(mcp, conn):
     @mcp.tool()
     def run_custom_diagnostic(python_code: str):
         """
-        万能执行器。Opus 优先级最高的工具。
-        允许 AI 编写复杂的检测逻辑并直接运行。
+        执行传入的 Python 代码字符串并返回执行结果。
+
+        设计用于在受控环境下运行自定义诊断或分析脚本。调用方应负责保证代码来源可信并进行必要的安全与错误处理。
         """
         return conn.execute(python_code)
     @mcp.tool()
     def capture_viewport(output_name: str = "ai_capture.jpg"):
         """
-        截取 Maya 当前活动视口的截图，并尝试将其路径返回。
+        在当前 Maya 会话中对活动视口生成截图并返回文件路径与操作信息。
+
+        截图文件写入用户临时目录，返回值包含操作消息与写入路径，便于后续上传或归档。
         """
         code = f"""
         import maya.cmds as cmds
         import os
-        # 获取临时目录
+        # 获取用户临时目录
         tmp_dir = cmds.internalVar(userTmpDir=True)
         full_path = os.path.join(tmp_dir, '{output_name}')
         
-        # 视口截图逻辑
-        cmds.viewFit(all=True) # 自动对焦物体
+        # 生成视口截图（playblast），以当前帧为基准并写入指定文件
+        cmds.viewFit(all=True)
         cmds.playblast(frame=cmds.currentTime(q=True), format='image', 
                        viewer=False, compression='jpg', completeFilename=full_path)
         
@@ -86,7 +97,9 @@ def register_perception_tools(mcp, conn):
     @mcp.tool()
     def get_node_attributes(node_name: str):
         """
-        精准获取某个节点的所有可 Key 属性和 Message 连接，弥补通用查询的不足。
+        检索指定节点的属性集，包括可键控属性（keyable）、用户自定义属性以及节点类型。
+
+        如果节点不存在，返回带错误标识的结构。该信息用于节点级别的精确诊断、同步与序列化流程。
         """
         code = f"""
         import maya.cmds as cmds
