@@ -15,8 +15,7 @@
    pip install -r requirements.txt
    python server.py
    ```
-4. 接入 AI IDE
-   在支持 MCP 的客户端中添加以下配置：
+4. 在支持 MCP 的AI IDE中添加以下配置：
    ```
    {
      "mcpServers": {
