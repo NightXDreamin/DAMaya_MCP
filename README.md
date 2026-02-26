@@ -20,7 +20,7 @@
    {
      "mcpServers": {
        "DAMaya_MCP": {
-         "command": "path/to/your/folder/DAMaya_MCP/.venv/Scripts/python.exe",
+         "command": "path/to/your/python/that/installed/requirement/python.exe",
          "args": ["path/to/your/folder/DAMaya_MCP/server.py"]
        }
      }
