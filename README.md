@@ -25,7 +25,7 @@ python install_maya_mcp.py
 ### 2.
 运行
 ```bash
-python generate_mcp_json.py
+python generate_mcp_config.py
 ```
 会自动生成MCP配置
 拷贝进您的IDE的MCP设置中即可
