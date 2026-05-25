@@ -23,8 +23,12 @@ python install_maya_mcp.py
 *注：安装程序会自动定位您的 Maya 脚本目录，并修改 `userSetup.py`。*
 
 ### 2.
-运行Generate_MCP_Json.py文件会自动生成MCP配置
-在您的IDE的MCP设置中拷贝进配置脚本即可
+运行
+```bash
+python generate_mcp_json.py
+```
+会自动生成MCP配置
+拷贝进您的IDE的MCP设置中即可
 
 ### 3. 重启 Maya
 重启 Maya 后，系统会自动：
