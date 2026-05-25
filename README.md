@@ -20,15 +20,17 @@
 ```bash
 python install_maya_mcp.py
 ```
-*注：安装程序会自动定位您的 Maya 脚本目录，并安全、幂等地修改 `userSetup.py`。*
+*注：安装程序会自动定位您的 Maya 脚本目录，并修改 `userSetup.py`。*
 
-### 2. 重启 Maya
+### 2.
+运行Generate_MCP_Json.py文件会自动生成MCP配置
+在您的IDE的MCP设置中拷贝进配置脚本即可
+
+### 3. 重启 Maya
 重启 Maya 后，系统会自动：
 1. 开启 TCP 通信端口 `:7022`；
 2. 启动顶栏主菜单 `DAMaya MCP`；
 3. 根据配置自动引导外部后台 MCP 守护进程。
-
----
 
 ## TA 工具箱列表
 
