@@ -16,12 +16,27 @@ class MayaOrchestrator:
         # 配置与 Maya 的网络连接（commandPort）
         self.conn = MayaConnection(port=port)
 
-        # 自动完成模块工具注册
+        # 自动完成模块工具注册与核心功能注册
+        self._register_core_tools()
         self._register_all_modules()
+
+    def _register_core_tools(self):
+        """
+        注册核心系统层面的通用工具（如规范化执行 Python 代码）。
+        """
+        @self.mcp.tool()
+        def execute_python_code(code: str) -> str:
+            """
+            在 Maya 会话中执行任意 Python 代码块（规范化工具通道）。
+
+            该工具在 Maya 中以安全事务（undo chunk）包裹运行，支持撤销操作。
+            它能完整捕获 stdout、stderr 和执行期发生的 Traceback 异常，并以结构化 JSON 格式回传。
+            """
+            return self.conn.execute(code)
 
     def _register_all_modules(self):
         """
-        将各功能模块（perception、rigging、ue_pipeline）注册到同一 MCP 实例。
+        将各功能模块注册到同一 MCP 实例。
 
         该方法负责把模块级工具绑定到 `self.mcp`，使外部客户端通过统一接口调用。
         """

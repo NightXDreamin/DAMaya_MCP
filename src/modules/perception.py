@@ -33,12 +33,13 @@ def register_perception_tools(mcp, conn):
         
         _mcp_results = []
         for n in unique_nodes[:30]:
+            is_dag = bool(cmds.ls(n, dag=True))
             _mcp_results.append({{
                 "name": n.split('|')[-1],
                 "type": cmds.objectType(n),
                 "path": n,
-                "parent": cmds.listRelatives(n, parent=True) or None,
-                "children": cmds.listRelatives(n, children=True) or [],
+                "parent": (cmds.listRelatives(n, parent=True) or None) if is_dag else None,
+                "children": (cmds.listRelatives(n, children=True) or []) if is_dag else [],
                 "connections_in": cmds.listConnections(n, destination=False, source=True, plugs=True) or [],
                 "connections_out": cmds.listConnections(n, destination=True, source=False, plugs=True) or []
             }})
@@ -63,14 +64,6 @@ def register_perception_tools(mcp, conn):
         """
         return conn.execute(code)
 
-    @mcp.tool()
-    def run_custom_diagnostic(python_code: str):
-        """
-        执行传入的 Python 代码字符串并返回执行结果。
-
-        设计用于在受控环境下运行自定义诊断或分析脚本。调用方应负责保证代码来源可信并进行必要的安全与错误处理。
-        """
-        return conn.execute(python_code)
     @mcp.tool()
     def capture_viewport(output_name: str = "ai_capture.jpg"):
         """
@@ -112,4 +105,56 @@ def register_perception_tools(mcp, conn):
                 "type": cmds.objectType('{node_name}')
             }}
         """
-    
+        return conn.execute(code)
+
+    @mcp.tool()
+    def get_scene_summary():
+        """
+        获取当前 Maya 场景的大纲概览与统计信息。
+        
+        返回数据包括：总节点数、Mesh 数量、Joint 骨骼数量、Camera 相机数量、
+        Constraint 约束数量、Material 材质球数量以及当前选择的主体。
+        该工具极度适合场景健康度分析与场景复杂度审计。
+        """
+        code = """
+        import maya.cmds as cmds
+        all_meshes = cmds.ls(type="mesh", long=True) or []
+        visible_meshes = [m for m in all_meshes if not cmds.getAttr(m + ".intermediateObject")]
+        _mcp_results = {
+            "total_nodes": len(cmds.ls(long=True) or []),
+            "meshes": len(visible_meshes),
+            "joints": len(cmds.ls(type="joint") or []),
+            "cameras": len(cmds.ls(type="camera") or []),
+            "constraints": len(cmds.ls(type="constraint") or []),
+            "materials": len(cmds.ls(type="shadingEngine") or []),
+            "selected": cmds.ls(sl=True) or []
+        }
+        """
+        return conn.execute(code)
+
+    @mcp.tool()
+    def search_nodes_by_attribute(attr_name: str, value_pattern: str = None):
+        """
+        在 Maya 场景中搜索具有指定 custom/userDefined 属性或特定属性值的节点。
+        
+        参数说明：
+        - `attr_name`: 属性的精确名称。
+        - `value_pattern`: 可选，要匹配的属性值模式（进行模糊或精确匹配）。
+        """
+        # Convert search pattern for execution safety
+        code = f"""
+        import maya.cmds as cmds
+        all_nodes = cmds.ls(long=True) or []
+        found_nodes = []
+        for n in all_nodes:
+            if cmds.attributeQuery('{attr_name}', node=n, exists=True):
+                val = cmds.getAttr(n + '.' + '{attr_name}')
+                val_str = str(val)
+                patt = '{value_pattern}'
+                if patt == 'None' or patt == '' or patt.lower() == 'null':
+                    found_nodes.append({{"node": n, "value": val}})
+                elif patt in val_str:
+                    found_nodes.append({{"node": n, "value": val}})
+        _mcp_results = found_nodes[:50]
+        """
+        return conn.execute(code)

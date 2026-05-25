@@ -66,12 +66,128 @@ def register_ue_tools(mcp, conn):
         返回导出路径字符串以便后续上传或归档。
         """
         code = f"""
-        import maya.mel as mel
+        import maya.cmds as cmds
         # 确保 FBX 插件已加载
         if not cmds.pluginInfo('fbxmaya', q=True, loaded=True):
             cmds.loadPlugin('fbxmaya')
             
-        cmds.file('{export_path}', force=True, options='v=0;', type='FBX export', pr=True, es={selection_only})
-        _mcp_results = f"Exported to {{export_path}}"
+        path_str = r'{export_path}'
+        cmds.file(path_str, force=True, options='v=0;', type='FBX export', pr=True, es={selection_only})
+        _mcp_results = f"Exported to {{path_str}}"
+        """
+        return conn.execute(code)
+
+    @mcp.tool()
+    def validate_texture_resolutions():
+        """
+        扫描当前场景中所有文件贴图（file texture），并审计其长宽分辨率是否为2的幂次方（Power of Two）。
+        
+        这是 Unreal 导出的关键校验，非2的幂次方贴图在 UE 中无法进行 Mipmap 生成或纹理流送（Texture Streaming）。
+        """
+        code = """
+        import maya.cmds as cmds
+        import os
+        
+        file_nodes = cmds.ls(type="file") or []
+        issues = []
+        
+        def is_power_of_two(n):
+            return (n & (n - 1) == 0) and n > 0
+            
+        for fn in file_nodes:
+            path = cmds.getAttr(fn + ".fileTextureName")
+            
+            try:
+                w_val = cmds.getAttr(fn + ".outSizeX")
+                h_val = cmds.getAttr(fn + ".outSizeY")
+                w = int(w_val) if w_val is not None else 0
+                h = int(h_val) if h_val is not None else 0
+            except Exception:
+                w, h = 0, 0
+            
+            is_w_po2 = is_power_of_two(w)
+            is_h_po2 = is_power_of_two(h)
+            
+            if w == 0 or h == 0 or not (is_w_po2 and is_h_po2):
+                issues.append({
+                    "node": fn,
+                    "path": path or "empty/virtual",
+                    "resolution": f"{w}x{h}",
+                    "error": "Non-power-of-two resolution or invalid/missing dimensions"
+                })
+                
+        _mcp_results = {
+            "total_scanned": len(file_nodes),
+            "passed": len(file_nodes) - len(issues),
+            "failed_textures": issues
+        }
+        """
+        return conn.execute(code)
+
+    @mcp.tool()
+    def auto_rename_for_ue(node_list: list = None):
+        """
+        根据 Unreal Engine 行业标准规范命名，自动给所选或指定的节点重命名并加上标准前缀。
+        
+        规范如下：
+        - Mesh: 前缀 `SM_` (e.g. SM_Sword)
+        - Joint: 前缀 `joint_` (e.g. joint_Pelvis)
+        - Material (shadingEngine): 前缀 `M_` (e.g. M_Iron)
+        - Texture (file): 前缀 `T_` (e.g. T_Wood_D)
+        
+        参数说明：
+        - `node_list`: 指定重命名节点列表。若未指定，自动使用当前 Maya 选中项。
+        """
+        nodes_repr = f"{node_list}" if node_list is not None else "cmds.ls(sl=True, long=True)"
+        code = f"""
+        import maya.cmds as cmds
+        
+        nodes = {nodes_repr} or []
+        renamed_map = {{}}
+        
+        for n in nodes:
+            if not cmds.objExists(n):
+                continue
+            
+            base_name = n.split('|')[-1]
+            obj_type = cmds.objectType(n)
+            
+            prefix = ""
+            clean_name = base_name
+            
+            if obj_type == "transform":
+                shapes = cmds.listRelatives(n, shapes=True) or []
+                if shapes and cmds.objectType(shapes[0]) == "mesh":
+                    prefix = "SM_"
+                elif shapes and cmds.objectType(shapes[0]) == "camera":
+                    continue
+                else:
+                    prefix = "Grp_"
+            elif obj_type == "joint":
+                prefix = "joint_"
+            elif obj_type == "shadingEngine":
+                prefix = "M_"
+            elif obj_type == "file":
+                prefix = "T_"
+                
+            if not prefix:
+                continue
+                
+            if clean_name.startswith(prefix):
+                continue
+                
+            for p in ["SM_", "M_", "T_", "Grp_", "joint_"]:
+                if clean_name.startswith(p):
+                    clean_name = clean_name[len(p):]
+                    break
+                    
+            new_name = prefix + clean_name
+            try:
+                actual_new_name = cmds.rename(n, new_name)
+                renamed_map[n] = actual_new_name
+            except Exception as e:
+                renamed_map[n] = f"error: {{e}}"
+                
+        _mcp_results = renamed_map
         """
         return conn.execute(code)
