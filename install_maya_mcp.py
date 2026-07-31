@@ -62,18 +62,19 @@ try:
     
     def _damaya_mcp_startup():
         import maya.cmds as cmds
+        from src.core import config as _mcp_config
         
-        # 1. Open Command Port
-        port_str = ":7022"
+        # 1. Open Command Port (端口从 config.json 读取)
+        port_str = ":{0}".format(_mcp_config.get_port())
         if not cmds.commandPort(port_str, q=True):
             try:
                 # sourceType=python, echoOutput=False
                 cmds.commandPort(n=port_str, sourceType="python", echoOutput=False)
-                print("DAMaya MCP: CommandPort :7022 successfully opened.")
+                print("DAMaya MCP: CommandPort {0} successfully opened.".format(port_str))
             except Exception as e:
-                print(f"DAMaya MCP Error: Failed to open CommandPort :7022: {{e}}")
+                print("DAMaya MCP Error: Failed to open CommandPort {0}: {1}".format(port_str, e))
         else:
-            print("DAMaya MCP: CommandPort :7022 is already open.")
+            print("DAMaya MCP: CommandPort {0} is already open.".format(port_str))
 
         # 2. Register Native Menu
         try:
@@ -134,7 +135,7 @@ except Exception as startup_err:
         print("=" * 60)
         print("Installation complete! Next steps:")
         print("1. Restart Maya if it is already open.")
-        print("2. Maya will auto-open port 7022, boot MCP, and create 'DAMaya MCP' menus.")
+        print("2. Maya will auto-open the commandPort, boot MCP, and create 'DAMaya MCP' menus.")
         print("3. Open Maya menu 'DAMaya MCP' -> 'Control Panel' to explore the UI.")
         print("=" * 60)
 

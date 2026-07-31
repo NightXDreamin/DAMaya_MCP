@@ -1,50 +1,17 @@
 import os
 import sys
-import json
 import subprocess
 import signal
 
-# Resolve important file paths relative to this script
-CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.dirname(os.path.dirname(CURRENT_DIR))
+from src.core.config import PROJECT_ROOT, CONFIG_FILE, get_config, save_config
+
 VENV_PYTHON = os.path.join(PROJECT_ROOT, ".venv", "Scripts", "python.exe")
-SERVER_PY = os.path.join(PROJECT_ROOT, "server.py")
+SERVER_PY = os.path.join(PROJECT_ROOT, "main.py")
 PID_FILE = os.path.join(PROJECT_ROOT, ".mcp_server.pid")
-CONFIG_FILE = os.path.join(PROJECT_ROOT, "config.json")
 
 # Ensure Windows compatibility
 if not VENV_PYTHON.endswith(".exe") and os.name == "nt":
     VENV_PYTHON += ".exe"
-
-
-def get_config():
-    """
-    Read settings from config.json. If it does not exist, returns defaults.
-    """
-    default_config = {
-        "autostart": True,
-        "commandport_port": 7022,
-        "server_port": 7022
-    }
-    if os.path.exists(CONFIG_FILE):
-        try:
-            with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-                return json.load(f)
-        except Exception:
-            pass
-    return default_config
-
-
-def save_config(config_data):
-    """
-    Save configuration changes to config.json.
-    """
-    try:
-        with open(CONFIG_FILE, "w", encoding="utf-8") as f:
-            json.dump(config_data, f, indent=4, ensure_ascii=False)
-        return True
-    except Exception:
-        return False
 
 
 def should_autostart():

@@ -43,7 +43,7 @@ def display_configuration():
     """
     # Define our server settings using standardized forward slashes
     python_cmd = VENV_PYTHON.replace('\\', '/')
-    server_script = os.path.join(PROJECT_ROOT, "server.py").replace('\\', '/')
+    server_script = os.path.join(PROJECT_ROOT, "main.py").replace('\\', '/')
 
     server_settings = {
         "damaya": {

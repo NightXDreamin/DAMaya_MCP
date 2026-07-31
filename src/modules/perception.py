@@ -1,4 +1,14 @@
-import json
+def _lit(v, none_as_str="None"):
+    """
+    将工具参数转为可安全注入 Maya 的 Python 源码字面量。
+
+    使用 repr() 而非手工 f-string 拼接，正确处理引号、换行、反斜杠等特殊字符，
+    避免用户输入含引号时注入代码直接 SyntaxError。
+    """
+    if v is None:
+        return repr(none_as_str)
+    return repr(v)
+
 
 def register_perception_tools(mcp, conn):
     @mcp.tool()
@@ -13,14 +23,16 @@ def register_perception_tools(mcp, conn):
         - `pattern`: Maya 节点匹配模式（默认为全部 `*`）。
         - `node_type`: 支持以逗号分隔的节点类型列表，例如 "transform,joint,constraint"。
         """
+        type_lit = _lit(node_type)
+        pattern_lit = _lit(pattern)
         code = f"""
         import maya.cmds as cmds
-        type_str = '{node_type}'
+        type_str = {type_lit}
         types = [t.strip() for t in type_str.split(',')]
         
         all_nodes = []
         for t in types:
-            found = cmds.ls('{pattern}', type=t, long=True) or []
+            found = cmds.ls({pattern_lit}, type=t, long=True) or []
             all_nodes.extend(found)
         
         # 对搜索结果去重以保证顺序一致性
@@ -71,12 +83,13 @@ def register_perception_tools(mcp, conn):
 
         截图文件写入用户临时目录，返回值包含操作消息与写入路径，便于后续上传或归档。
         """
+        output_lit = _lit(output_name)
         code = f"""
         import maya.cmds as cmds
         import os
         # 获取用户临时目录
         tmp_dir = cmds.internalVar(userTmpDir=True)
-        full_path = os.path.join(tmp_dir, '{output_name}')
+        full_path = os.path.join(tmp_dir, {output_lit})
         
         # 生成视口截图（playblast），以当前帧为基准并写入指定文件
         cmds.viewFit(all=True)
@@ -88,21 +101,27 @@ def register_perception_tools(mcp, conn):
         return conn.execute(code)
 
     @mcp.tool()
-    def get_node_attributes(node_name: str):
+    def get_node_attributes(node_name: str = None):
         """
         检索指定节点的属性集，包括可键控属性（keyable）、用户自定义属性以及节点类型。
 
-        如果节点不存在，返回带错误标识的结构。该信息用于节点级别的精确诊断、同步与序列化流程。
+        如果参数 node_name 未指定，自动默认使用 Maya 当前选择的主选择节点。
         """
+        if node_name:
+            node_repr = _lit(node_name)
+        else:
+            node_repr = "cmds.ls(sl=True, long=True)[0] if cmds.ls(sl=True) else ''"
         code = f"""
         import maya.cmds as cmds
-        if not cmds.objExists('{node_name}'):
-            _mcp_results = {{"error": "Node not found"}}
+        target_node = {node_repr}
+        if not target_node or not cmds.objExists(target_node):
+            _mcp_results = {{"error": "Node not found or nothing selected"}}
         else:
             _mcp_results = {{
-                "keyable": cmds.listAttr('{node_name}', k=True) or [],
-                "user_defined": cmds.listAttr('{node_name}', ud=True) or [],
-                "type": cmds.objectType('{node_name}')
+                "keyable": cmds.listAttr(target_node, k=True) or [],
+                "user_defined": cmds.listAttr(target_node, ud=True) or [],
+                "type": cmds.objectType(target_node),
+                "resolved_node": target_node
             }}
         """
         return conn.execute(code)
@@ -141,16 +160,18 @@ def register_perception_tools(mcp, conn):
         - `attr_name`: 属性的精确名称。
         - `value_pattern`: 可选，要匹配的属性值模式（进行模糊或精确匹配）。
         """
-        # Convert search pattern for execution safety
+        # repr() 生成安全字面量；value_pattern 为 None 时保持旧语义 'None'（不过滤）
+        attr_lit = _lit(attr_name)
+        value_lit = _lit(value_pattern)
         code = f"""
         import maya.cmds as cmds
         all_nodes = cmds.ls(long=True) or []
         found_nodes = []
         for n in all_nodes:
-            if cmds.attributeQuery('{attr_name}', node=n, exists=True):
-                val = cmds.getAttr(n + '.' + '{attr_name}')
+            if cmds.attributeQuery({attr_lit}, node=n, exists=True):
+                val = cmds.getAttr(n + '.' + {attr_lit})
                 val_str = str(val)
-                patt = '{value_pattern}'
+                patt = {value_lit}
                 if patt == 'None' or patt == '' or patt.lower() == 'null':
                     found_nodes.append({{"node": n, "value": val}})
                 elif patt in val_str:
