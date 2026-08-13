@@ -96,7 +96,7 @@ def is_server_running() -> bool:
 
 def start_server():
     """
-    Launches the external server.py in the background.
+    Launches the external MCP server (main.py) in the background.
     Returns a tuple: (success: bool, message: str)
     """
     pid = get_running_server_pid()
@@ -108,7 +108,7 @@ def start_server():
         return False, f"Server entry point file not found at: {SERVER_PY}"
 
     try:
-        # Start server.py in the background
+        # Start the MCP server entry point (main.py) in the background
         # CREATE_NO_WINDOW ensures no empty command prompt window pops up on Windows
         startupinfo = None
         creationflags = 0

@@ -16,25 +16,49 @@
 
 ## 🚀 快速开始
 
-### 1. 自动挂载至 Maya 启动链
+### 0. 前置要求
+- **Python 3.10+**：独立安装的 Python（后台 MCP 服务由其驱动，与 Maya 内置 Python 无关），推荐 3.11+。
+- **Autodesk Maya**：任意带有 PySide 的现代版本。
+- **一个 MCP 客户端**：Claude Desktop、Cursor 或 VS Code 等。
+
+### 1. 创建虚拟环境并安装依赖
+在项目根目录下，创建 `.venv` 虚拟环境并安装 `requirements.txt` 中的依赖：
+
+**Windows（PowerShell / CMD）：**
+```bash
+python -m venv .venv
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+```
+
+**macOS / Linux：**
+```bash
+python -m venv .venv
+.venv/bin/python -m pip install -r requirements.txt
+```
+
+> 💡 说明：`mcp`、`pydantic` 等后台服务依赖都隔离安装在这个 `.venv` 中，避免污染系统 Python。步骤 3 的 `generate_mcp_config.py` 在检测到 `.venv` 缺失时也会自动创建并安装依赖，因此即便跳过本步骤也能兜底；但手动先完成一遍能更早暴露环境问题。
+
+### 2. 自动挂载至 Maya 启动链
 在项目根目录下，使用 Python 运行安装器：
 ```bash
 python install_maya_mcp.py
 ```
-*注：安装程序会自动定位您的 Maya 脚本目录，并安全、幂等地修改 `userSetup.py`。*
+*注：安装程序会自动定位您的 Maya 脚本目录，并安全、幂等地修改 `userSetup.py`，无损保留您原有的配置。*
 
-### 2. 生成 MCP 客户端配置
+### 3. 生成 MCP 客户端配置
 在项目根目录下运行配置辅助程序：
 ```bash
-python Generate_MCP_Json.py
+python generate_mcp_config.py
 ```
-*注：该脚本会自动校验并安装 Pip 依赖，在终端中打印出标准的 JSON 配置块以及常用存放路径，并保持窗口开启以便于手动复制粘贴。*
+*注：该脚本会复用（或自动创建）`.venv` 并确保依赖已安装，然后在终端打印标准的 JSON 配置块及常用存放路径，并保持窗口开启以便复制粘贴。*
 
-### 3. 重启 Maya
+### 4. 重启 Maya
 重启 Maya 后，系统会自动：
 1. 开启 TCP 通信端口（默认 `:7022`，可通过项目根 `config.json` 的 `commandport_port` 修改）；
 2. 启动顶栏主菜单 `DAMaya MCP`；
 3. 根据配置自动引导外部后台 MCP 守护进程。
+
+> ⚙️ 补充：`install_maya_mcp.py` 与 `generate_mcp_config.py` 本身只用 Python 标准库，用系统 `python` 运行即可；真正需要依赖的是后台 MCP 服务 `main.py`，它由 `.venv` 中的 Python 驱动。
 
 ---
 

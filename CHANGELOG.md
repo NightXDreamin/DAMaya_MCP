@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.2] - 2026-08-13
+
+### 安装体验修复
+- `generate_mcp_config.py` 在缺失 `.venv` 时自动创建虚拟环境并安装 `requirements.txt` 依赖，生成的 MCP 配置 `command` 回退到系统 Python，不再硬编码指向不存在的 `.venv/Scripts/python.exe`
+- `start_mcp_server.bat` 移除硬编码的绝对路径，改用 `%~dp0` 定位项目目录，入口指向 `main.py`
+- 修正 `server_manager.py` 中陈旧的 `server.py` 注释（实际入口为 `main.py`）
+- README 更正配置脚本文件名 `generate_mcp_config.py`，补充虚拟环境创建说明
+
 ## [1.2.1] - 2025-07-31
 
 ### 轻量化（Breaking）

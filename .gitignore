@@ -7,3 +7,4 @@ __pycache__/
 *.swp
 .mcp_server.pid
 config.json
+/.reasonix
