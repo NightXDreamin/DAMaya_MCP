@@ -1,7 +1,13 @@
 import os
 import importlib
 
-from mcp.server.fastmcp import FastMCP
+# 兼容 mcp 1.x (FastMCP) 与 mcp 2.x (MCPServer)：
+# mcp 2.0.0 起 FastMCP 更名为 MCPServer 并从 mcp.server 导出，旧路径 mcp.server.fastmcp 已移除。
+try:
+    from mcp.server import MCPServer as _MCPServer  # mcp 2.x
+except ImportError:  # mcp 1.x
+    from mcp.server.fastmcp import FastMCP as _MCPServer
+
 from src.core.connection import MayaConnection
 from src.core import config
 
@@ -13,8 +19,8 @@ class MayaOrchestrator:
     用途：对外暴露一组生产就绪的工具集合（perception），并管理与 Maya 的连接。
     """
     def __init__(self, name="Maya-Orchestrator-Pro", port=None):
-        # 创建 FastMCP 服务实例
-        self.mcp = FastMCP(name)
+        # 创建 MCP 服务实例（兼容 FastMCP 1.x / MCPServer 2.x）
+        self.mcp = _MCPServer(name)
         # 配置与 Maya 的网络连接（commandPort），端口默认取 config.json
         self.conn = MayaConnection(port=port)
 

@@ -19,6 +19,7 @@ sys.stderr = WritableTextIOWrapper(sys.stderr.buffer, encoding=sys.stderr.encodi
 import os
 import subprocess
 import logging
+import traceback
 
 # Auto-redirect to virtual environment python if not already running under it
 project_root = os.path.dirname(os.path.abspath(__file__))
@@ -80,9 +81,9 @@ try:
         try:
             log("Initializing MayaOrchestrator...")
             orchestrator = MayaOrchestrator()
-            log("MayaOrchestrator initialized successfully! Starting FastMCP run...")
+            log("MayaOrchestrator initialized successfully! Starting MCP server run...")
             orchestrator.mcp.run()
-            log("FastMCP run finished gracefully.")
+            log("MCP server run finished gracefully.")
         except Exception as e:
             log(f"CRASH during initialization or run: {e}")
             log(traceback.format_exc())

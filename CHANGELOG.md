@@ -3,6 +3,7 @@
 ## [1.2.2] - 2026-08-13
 
 ### 安装体验修复
+- 兼容 `mcp 2.0.0`：`orchestrator.py` 用 `try/except` 同时导入 `MCPServer`（mcp 2.x）与 `FastMCP`（mcp 1.x），`requirements.txt` 放宽为 `mcp>=1.26,<3`，避免装到 2.x 时启动即 `No module named 'mcp.server.fastmcp'`
 - `generate_mcp_config.py` 在缺失 `.venv` 时自动创建虚拟环境并安装 `requirements.txt` 依赖，生成的 MCP 配置 `command` 回退到系统 Python，不再硬编码指向不存在的 `.venv/Scripts/python.exe`
 - `start_mcp_server.bat` 移除硬编码的绝对路径，改用 `%~dp0` 定位项目目录，入口指向 `main.py`
 - 修正 `server_manager.py` 中陈旧的 `server.py` 注释（实际入口为 `main.py`）
